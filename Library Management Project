@@ -2,33 +2,23 @@ import java.io.*;
 import java.util.*;
 
 class Book implements Serializable {
-    private String id;
-    private String title;
-    private String author;
-    private String category;
-    private String publisher;
-    private String publishDate;
+    private static final long serialVersionUID = 1L;
+    private String id, title, author, category, publisher, publishDate;
     private double price;
 
     public Book(String id, String title, String author, String category, String publisher, String publishDate, double price) {
-        this.id = id;
-        this.title = title;
-        this.author = author;
-        this.category = category;
-        this.publisher = publisher;
-        this.publishDate = publishDate;
-        this.price = price;
+        this.id = id; this.title = title; this.author = author;
+        this.category = category; this.publisher = publisher;
+        this.publishDate = publishDate; this.price = price;
     }
 
-    // Getters and setters
+    // Getters
     public String getId() { return id; }
     public String getTitle() { return title; }
     public String getAuthor() { return author; }
-    public String getCategory() { return category; }
-    public String getPublisher() { return publisher; }
-    public String getPublishDate() { return publishDate; }
     public double getPrice() { return price; }
 
+    // Setters
     public void setTitle(String title) { this.title = title; }
     public void setAuthor(String author) { this.author = author; }
     public void setCategory(String category) { this.category = category; }
@@ -38,72 +28,63 @@ class Book implements Serializable {
 
     @Override
     public String toString() {
-        return String.format("ID: %s, Title: %s, Author: %s, Category: %s, Publisher: %s, Publish Date: %s, Price: %.2f",
-                id, title, author, category, publisher, publishDate, price);
+        return String.format("ID: %-5s | Title: %-15s | Author: %-15s | Price: %.2f", id, title, author, price);
     }
 }
 
 class LibraryManager {
-    private List<Book> books;
+    private List<Book> books = new ArrayList<>();
     private static final String FILE_PATH = "books.dat";
 
-    public LibraryManager() {
-        books = new ArrayList<>();
-        loadBooks();
-    }
+    public LibraryManager() { loadBooks(); }
 
     public void addBook(Book book) {
+        for (Book b : books) {
+            if (b.getId().equalsIgnoreCase(book.getId())) {
+                System.out.println("Error: Book with this ID already exists!");
+                return;
+            }
+        }
         books.add(book);
         saveBooks();
+        System.out.println("Book added successfully.");
     }
 
     public void viewBooks() {
-        if (books.isEmpty()) {
-            System.out.println("No books available.");
-            return;
-        }
-        for (Book book : books) {
-            System.out.println(book);
-        }
+        if (books.isEmpty()) { System.out.println("No books available."); return; }
+        for (Book book : books) System.out.println(book);
     }
 
     public void searchByTitle(String title) {
         boolean found = false;
         for (Book book : books) {
             if (book.getTitle().toLowerCase().contains(title.toLowerCase())) {
-                System.out.println(book);
-                found = true;
+                System.out.println(book); found = true;
             }
         }
-        if (!found) {
-            System.out.println("No books found with title: " + title);
-        }
+        if (!found) System.out.println("No books found with title: " + title);
     }
 
     public void searchByAuthor(String author) {
         boolean found = false;
         for (Book book : books) {
             if (book.getAuthor().toLowerCase().contains(author.toLowerCase())) {
-                System.out.println(book);
-                found = true;
+                System.out.println(book); found = true;
             }
         }
-        if (!found) {
-            System.out.println("No books found by author: " + author);
-        }
+        if (!found) System.out.println("No books found by author: " + author);
     }
 
     public void sortByPrice() {
-        Collections.sort(books, (b1, b2) -> Double.compare(b1.getPrice(), b2.getPrice()));
+        Collections.sort(books, Comparator.comparingDouble(Book::getPrice));
         System.out.println("Books sorted by price:");
         viewBooks();
     }
 
     public void deleteBook(String id) {
-        boolean removed = books.removeIf(book -> book.getId().equals(id));
-        if (removed) {
+        if (books.removeIf(book -> book.getId().equalsIgnoreCase(id))) {
             saveBooks();
-            System.out.println("Book with ID " + id + " deleted.");
+            System.out.println("Book deleted successfully.");
         } else {
             System.out.println("Book with ID " + id + " not found.");
         }
@@ -111,35 +92,29 @@ class LibraryManager {
 
     public void modifyBook(String id, Scanner scanner) {
         for (Book book : books) {
-            if (book.getId().equals(id)) {
-                System.out.print("Enter new title: ");
-                book.setTitle(scanner.nextLine());
-                System.out.print("Enter new author: ");
-                book.setAuthor(scanner.nextLine());
-                System.out.print("Enter new category: ");
-                book.setCategory(scanner.nextLine());
-                System.out.print("Enter new publisher: ");
-                book.setPublisher(scanner.nextLine());
-                System.out.print("Enter new publish date: ");
-                book.setPublishDate(scanner.nextLine());
-                System.out.print("Enter new price: ");
-                book.setPrice(Double.parseDouble(scanner.nextLine()));
+            if (book.getId().equalsIgnoreCase(id)) {
+                System.out.print("Enter new title: "); book.setTitle(scanner.nextLine());
+                System.out.print("Enter new author: "); book.setAuthor(scanner.nextLine());
+                System.out.print("Enter new category: "); book.setCategory(scanner.nextLine());
+                System.out.print("Enter new publisher: "); book.setPublisher(scanner.nextLine());
+                System.out.print("Enter new publish date: "); book.setPublishDate(scanner.nextLine());
+                System.out.print("Enter new price: "); book.setPrice(Double.parseDouble(scanner.nextLine()));
                 saveBooks();
                 System.out.println("Book updated successfully.");
                 return;
             }
         }
-        System.out.println("Book with ID " + id + " not found.");
+        System.out.println("Book not found.");
     }
 
     @SuppressWarnings("unchecked")
     private void loadBooks() {
+        File file = new File(FILE_PATH);
+        if (!file.exists()) return;
         try (ObjectInputStream ois = new ObjectInputStream(new FileInputStream(FILE_PATH))) {
             books = (List<Book>) ois.readObject();
-        } catch (FileNotFoundException e) {
-            System.out.println("No previous data found. Starting fresh.");
-        } catch (IOException | ClassNotFoundException e) {
-            System.out.println("Error loading books: " + e.getMessage());
+        } catch (Exception e) {
+            System.out.println("Error loading data: " + e.getMessage());
         }
     }
 
@@ -147,7 +122,7 @@ class LibraryManager {
         try (ObjectOutputStream oos = new ObjectOutputStream(new FileOutputStream(FILE_PATH))) {
             oos.writeObject(books);
         } catch (IOException e) {
-            System.out.println("Error saving books: " + e.getMessage());
+            System.out.println("Error saving data!");
         }
     }
 }
@@ -156,91 +131,30 @@ public class LibraryManagementSystem {
     public static void main(String[] args) {
         LibraryManager library = new LibraryManager();
         Scanner scanner = new Scanner(System.in);
-        boolean running = true;
 
-        while (running) {
-            System.out.println("\nLibrary Management System");
-            System.out.println("1. Add Book");
-            System.out.println("2. View Books");
-            System.out.println("3. Search by Title");
-            System.out.println("4. Search by Author");
-            System.out.println("5. Sort by Price");
-            System.out.println("6. Delete Book");
-            System.out.println("7. Modify Book");
-            System.out.println("8. Exit");
-            System.out.print("Choose an option: ");
-
-            int choice;
-            try {
-                choice = Integer.parseInt(scanner.nextLine());
-            } catch (NumberFormatException e) {
-                System.out.println("Invalid input. Please enter a number.");
-                continue;
-            }
-
+        while (true) {
+            System.out.println("\n--- Library Management System ---");
+            System.out.println("1. Add Book 2. View 3. Search Title 4. Search Author 5. Sort Price 6. Delete 7. Modify 8. Exit");
+            int choice = Integer.parseInt(scanner.nextLine());
             switch (choice) {
                 case 1:
-                    System.out.print("Enter ID: ");
-                    String id = scanner.nextLine();
-                    System.out.print("Enter title: ");
-                    String title = scanner.nextLine();
-                    System.out.print("Enter author: ");
-                    String author = scanner.nextLine();
-                    System.out.print("Enter category: ");
-                    String category = scanner.nextLine();
-                    System.out.print("Enter publisher: ");
-                    String publisher = scanner.nextLine();
-                    System.out.print("Enter publish date: ");
-                    String publishDate = scanner.nextLine();
-                    System.out.print("Enter price: ");
-                    double price;
-                    try {
-                        price = Double.parseDouble(scanner.nextLine());
-                    } catch (NumberFormatException e) {
-                        System.out.println("Invalid price format.");
-                        break;
-                    }
-                    library.addBook(new Book(id, title, author, category, publisher, publishDate, price));
-                    System.out.println("Book added successfully.");
+                    System.out.print("ID: "); String id = scanner.nextLine();
+                    System.out.print("Title: "); String title = scanner.nextLine();
+                    System.out.print("Author: "); String author = scanner.nextLine();
+                    System.out.print("Category: "); String cat = scanner.nextLine();
+                    System.out.print("Publisher: "); String pub = scanner.nextLine();
+                    System.out.print("Date: "); String date = scanner.nextLine();
+                    System.out.print("Price: "); double price = Double.parseDouble(scanner.nextLine());
+                    library.addBook(new Book(id, title, author, cat, pub, date, price));
                     break;
-
-                case 2:
-                    library.viewBooks();
-                    break;
-
-                case 3:
-                    System.out.print("Enter title to search: ");
-                    library.searchByTitle(scanner.nextLine());
-                    break;
-
-                case 4:
-                    System.out.print("Enter author to search: ");
-                    library.searchByAuthor(scanner.nextLine());
-                    break;
-
-                case 5:
-                    library.sortByPrice();
-                    break;
-
-                case 6:
-                    System.out.print("Enter book ID to delete: ");
-                    library.deleteBook(scanner.nextLine());
-                    break;
-
-                case 7:
-                    System.out.print("Enter book ID to modify: ");
-                    library.modifyBook(scanner.nextLine(), scanner);
-                    break;
-
-                case 8:
-                    running = false;
-                    System.out.println("Exiting system.");
-                    break;
-
-                default:
-                    System.out.println("Invalid option. Please try again.");
+                case 2: library.viewBooks(); break;
+                case 3: System.out.print("Title: "); library.searchByTitle(scanner.nextLine()); break;
+                case 4: System.out.print("Author: "); library.searchByAuthor(scanner.nextLine()); break;
+                case 5: library.sortByPrice(); break;
+                case 6: System.out.print("ID: "); library.deleteBook(scanner.nextLine()); break;
+                case 7: System.out.print("ID: "); library.modifyBook(scanner.nextLine(), scanner); break;
+                case 8: System.exit(0);
             }
         }
-        scanner.close();
     }
 }
